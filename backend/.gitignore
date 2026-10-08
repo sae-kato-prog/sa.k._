@@ -1,0 +1,5 @@
+.env
+.pgpass_*
+node_modules/
+data/
+backups/

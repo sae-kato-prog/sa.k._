@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TalkNest | チームチャット</title>
+<style>
+  :root{
+    --bg:#0a0c12; --panel:#13161f; --panel2:#191d28; --panel3:#1f2432;
+    --border:#272c3a; --border-soft:#1e2230;
+    --text:#edeff5; --muted:#8991a6; --muted-dim:#656d80;
+    --accent:#5b7cfa; --accent-soft:#5b7cfa26; --accent-deep:#3d5ce0;
+    --accent2:#30d890; --danger:#ff6b6b;
+    --shadow-lg:0 20px 48px -12px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+    --radius-lg:18px; --radius-md:12px; --radius-sm:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Helvetica Neue",Arial,sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, #1a2240 0%, transparent 45%),
+      radial-gradient(circle at 85% 100%, #152030 0%, transparent 50%),
+      var(--bg);
+    color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:0.01em;
+  }
+  #login{height:100vh;display:flex;align-items:center;justify-content:center;}
+  .login-card{
+    background:linear-gradient(165deg, var(--panel2) 0%, var(--panel) 100%);
+    border:1px solid var(--border);border-radius:var(--radius-lg);
+    padding:44px;width:380px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;
+  }
+  .login-card::before{
+    content:'';position:absolute;top:-60%;left:-20%;width:160%;height:160%;
+    background:radial-gradient(circle at 30% 20%, var(--accent-soft) 0%, transparent 60%);pointer-events:none;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;}
+  .logo{
+    width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#8457f0);
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+    box-shadow:0 6px 16px -4px var(--accent-deep);color:#fff;letter-spacing:0;
+  }
+  .login-card h1{font-size:19px;margin:0;font-weight:700;letter-spacing:0.02em;}
+  .login-card p{font-size:12px;color:var(--muted);margin:3px 0 0;}
+  .field{margin-bottom:16px;position:relative;z-index:1;}
+  .field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:7px;letter-spacing:0.03em;}
+  .field input{
+    width:100%;padding:11px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    background:var(--panel3);color:var(--text);font-size:14px;transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  button.primary{
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 8px 20px -6px var(--accent-deep);transition:transform .12s, opacity .12s;
+  }
+  button.primary:hover{opacity:0.92;transform:translateY(-1px);}
+  button.primary:active{transform:translateY(0);}
+  .hint{font-size:11px;color:var(--muted-dim);margin-top:16px;line-height:1.7;position:relative;z-index:1;}
+  .hidden{display:none !important;}
+
+  #app{display:grid;grid-template-columns:232px 1fr 310px;height:100vh;}
+  #app.no-thread{grid-template-columns:232px 1fr;}
+  .sidebar{background:linear-gradient(180deg, var(--panel) 0%, #0f1119 100%);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;}
+  .side-brand{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--border-soft);}
+  .side-brand .logo{width:30px;height:30px;font-size:12px;border-radius:9px;}
+  .side-brand h1{font-size:15px;margin:0;font-weight:700;letter-spacing:0.02em;background:linear-gradient(135deg,#fff,#b6c2ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .userbox{padding:13px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:9px;background:var(--panel2);}
+  .avatar{
+    width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;flex:none;box-shadow:0 2px 6px rgba(0,0,0,0.3), inset 0 0 0 1.5px rgba(255,255,255,0.15);
+  }
+  .userbox b{font-size:13px;font-weight:600;}
+  .userbox span{font-size:10.5px;color:var(--muted);display:block;margin-top:1px;}
+  .nav-title{font-size:10.5px;color:var(--muted-dim);padding:16px 18px 6px;letter-spacing:.08em;font-weight:600;text-transform:uppercase;}
+  .nav{display:flex;flex-direction:column;padding:0 10px;overflow-y:auto;gap:1px;}
+  .nav button{
+    background:none;border:none;color:var(--text);text-align:left;padding:8px 11px;border-radius:var(--radius-sm);
+    font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .12s;
+  }
+  .nav button:hover{background:var(--panel3);}
+  .nav button.active{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;box-shadow:0 4px 12px -4px var(--accent-deep);}
+  .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;opacity:0.85;}
+  .logout{margin:auto 16px 18px;font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px;cursor:pointer;transition:color .12s, border-color .12s;}
+  .logout:hover{color:var(--text);border-color:var(--accent);}
+
+  .main{display:flex;flex-direction:column;min-width:0;background:var(--panel);}
+  .main-header{padding:16px 22px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg, var(--panel2), var(--panel));}
+  .main-header h2{font-size:15.5px;margin:0;font-weight:700;}
+  .main-header p{font-size:11px;color:var(--muted);margin:3px 0 0;}
+  .messages{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:16px;}
+  .msg{display:flex;gap:11px;}
+  .msg .avatar{width:34px;height:34px;font-size:13px;}
+  .msg-body{flex:1;min-width:0;}
+  .msg-head{display:flex;align-items:baseline;gap:9px;}
+  .msg-head b{font-size:13.5px;font-weight:600;}
+  .msg-head time{font-size:11px;color:var(--muted-dim);}
+  .msg-text{font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#dfe2ea;}
+  .attachment-chip{
+    display:inline-flex;align-items:center;gap:5px;background:var(--panel3);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:5px 10px;font-size:11.5px;color:var(--muted);margin-top:6px;
+  }
+  .msg-actions{display:flex;gap:6px;margin-top:6px;}
+  .msg-actions button{
+    background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:13px;
+    font-size:11px;padding:3px 10px;cursor:pointer;transition:color .12s, border-color .12s, background .12s;
+  }
+  .msg-actions button:hover{color:var(--text);border-color:var(--accent);background:var(--accent-soft);}
+  .reactions{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
+  .reaction-pill{background:var(--panel3);border:1px solid var(--border);border-radius:11px;font-size:11.5px;padding:2px 8px;cursor:pointer;transition:border-color .12s;}
+  .reaction-pill.mine{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+  .composer{border-top:1px solid var(--border-soft);padding:14px 18px;display:flex;gap:9px;align-items:flex-end;background:linear-gradient(180deg, var(--panel), var(--panel2));}
+  .composer textarea{
+    flex:1;resize:none;background:var(--panel3);border:1px solid var(--border);border-radius:var(--radius-md);
+    color:var(--text);padding:11px 13px;font-size:13.5px;min-height:42px;max-height:120px;font-family:inherit;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .composer textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .composer .icon-btn{background:var(--panel3);border:1px solid var(--border);color:var(--muted);border-radius:var(--radius-sm);width:38px;height:38px;cursor:pointer;font-size:14px;flex:none;transition:border-color .12s, color .12s;}
+  .composer .icon-btn:hover{border-color:var(--accent);color:var(--text);}
+  .composer .send-btn{
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;border:none;border-radius:var(--radius-sm);
+    padding:0 18px;height:42px;font-size:13.5px;font-weight:600;cursor:pointer;flex:none;
+    box-shadow:0 8px 18px -6px var(--accent-deep);transition:transform .12s, opacity .12s;
+  }
+  .composer .send-btn:hover{opacity:0.92;transform:translateY(-1px);}
+  #fileInput{display:none;}
+  .pending-chips{display:flex;gap:6px;padding:0 18px;flex-wrap:wrap;}
+
+  .thread-panel{background:linear-gradient(180deg, var(--panel) 0%, #0f1119 100%);border-left:1px solid var(--border-soft);display:flex;flex-direction:column;}
+  .thread-panel.hidden{display:none;}
+  .thread-header{padding:16px 18px;border-bottom:1px solid var(--border-soft);display:flex;justify-content:space-between;align-items:center;}
+  .thread-header h3{font-size:13.5px;margin:0;font-weight:700;}
+  .thread-header button{background:none;border:none;color:var(--muted);font-size:17px;cursor:pointer;transition:color .12s;}
+  .thread-header button:hover{color:var(--text);}
+  .thread-origin{padding:12px 18px;border-bottom:1px solid var(--border-soft);font-size:12px;color:var(--muted);background:var(--panel2);}
+  .thread-replies{flex:1;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:12px;}
+  .thread-composer{border-top:1px solid var(--border-soft);padding:12px;display:flex;gap:7px;background:var(--panel2);}
+  .thread-composer textarea{
+    flex:1;resize:none;background:var(--panel3);border:1px solid var(--border);border-radius:var(--radius-sm);
+    color:var(--text);padding:9px;font-size:12.5px;min-height:34px;transition:border-color .15s;
+  }
+  .thread-composer textarea:focus{outline:none;border-color:var(--accent);}
+
+  .stamp-popover{
+    position:absolute;background:var(--panel3);border:1px solid var(--border);border-radius:var(--radius-md);
+    padding:10px;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;z-index:50;box-shadow:var(--shadow-lg);
+  }
+  .stamp-popover button{background:none;border:none;font-size:19px;cursor:pointer;padding:5px;border-radius:7px;transition:background .1s;}
+  .stamp-popover button:hover{background:var(--panel2);}
+
+  .messages::-webkit-scrollbar, .nav::-webkit-scrollbar, .thread-replies::-webkit-scrollbar{width:7px;}
+  .messages::-webkit-scrollbar-thumb, .nav::-webkit-scrollbar-thumb, .thread-replies::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+  .search-box{padding:10px 14px;}
+  .search-box input{
+    width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    background:var(--panel3);color:var(--text);font-size:12.5px;transition:border-color .15s, box-shadow .15s;
+  }
+  .search-box input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .small-add-btn{
+    background:var(--panel3);border:1px solid var(--border);color:var(--muted);border-radius:6px;
+    width:20px;height:20px;line-height:1;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:border-color .12s, color .12s;
+  }
+  .small-add-btn:hover{border-color:var(--accent);color:var(--text);}
+  .nav-empty{font-size:11.5px;color:var(--muted-dim);padding:8px 11px;}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(5,7,12,0.65);display:flex;align-items:center;justify-content:center;z-index:100;
+    backdrop-filter:blur(2px);
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal-card{
+    background:linear-gradient(165deg, var(--panel2) 0%, var(--panel) 100%);border:1px solid var(--border);
+    border-radius:var(--radius-lg);padding:28px;width:380px;box-shadow:var(--shadow-lg);
+  }
+  .modal-card h3{margin:0 0 18px;font-size:15px;font-weight:700;}
+  .modal-card .radio-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:20px;font-size:13px;color:var(--text);margin-top:2px;}
+  .modal-card .radio-row label{display:inline-flex !important;flex-direction:row;align-items:center;gap:6px;cursor:pointer;margin-bottom:0 !important;white-space:nowrap;}
+  .modal-card .radio-row input[type="radio"]{margin:0;flex:none;width:14px;height:14px;}
+  .modal-card .member-checklist{
+    display:flex;flex-direction:column;gap:4px;max-height:170px;overflow-y:auto;
+    background:var(--panel3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-top:2px;
+  }
+  .modal-card .member-checklist label{
+    display:flex !important;flex-direction:row;align-items:center;gap:8px;font-size:12.5px;
+    padding:6px 8px;border-radius:6px;cursor:pointer;margin-bottom:0 !important;width:100%;
+  }
+  .modal-card .member-checklist label:hover{background:var(--panel2);}
+  .modal-card .member-checklist input[type="checkbox"]{margin:0;flex:none;width:14px;height:14px;}
+  .modal-card .member-checklist label span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+  .ghost-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:var(--radius-sm);padding:9px 14px;font-size:13px;cursor:pointer;transition:color .12s, border-color .12s;}
+  .ghost-btn:hover{color:var(--text);border-color:var(--accent);}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <div class="login-card">
+    <div class="brand">
+      <div class="logo">TN</div>
+      <div><h1>TalkNest</h1><p>チーム向けチャット（確認用MVP）</p></div>
+    </div>
+    <div class="field"><label>ユーザー名</label><input id="loginUsername" value="takasu"></div>
+    <div class="field"><label>パスワード</label><input id="loginPassword" type="password" value="password"></div>
+    <button class="primary" id="loginBtn" style="width:100%;">ログイン</button>
+    <p id="loginError" style="color:#ff6b6b;font-size:12px;margin-top:10px;"></p>
+  </div>
+</section>
+
+<section id="app" class="hidden no-thread" data-gadget-id="gadget_talknest_kato">
+  <aside class="sidebar">
+    <div class="side-brand"><div class="logo">TN</div><div><h1>TalkNest</h1></div></div>
+    <div class="userbox"><div class="avatar" id="meAvatar"></div><div><b id="meName"></b><span id="meDept"></span></div></div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="🔍 チャンネル・DMを検索">
+    </div>
+    <div class="nav-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>チャンネル</span>
+      <button id="newChannelBtn" class="small-add-btn" title="チャンネルを作成">＋</button>
+    </div>
+    <div class="nav" id="channelNav"></div>
+    <div class="nav-title">ダイレクトメッセージ</div>
+    <div class="nav" id="dmNav"></div>
+    <button class="logout" id="logoutBtn">ログアウト</button>
+  </aside>
+
+  <div class="main">
+    <div class="main-header">
+      <div><h2 id="roomTitle">—</h2><p id="roomSub"></p></div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="pending-chips" id="pendingChips"></div>
+    <div class="composer">
+      <input type="file" id="fileInput" multiple>
+      <button class="icon-btn" id="attachBtn" title="ファイル添付">📎</button>
+      <textarea id="composerInput" placeholder="メッセージを入力 (Ctrl/Cmd+Enterで送信)"></textarea>
+      <button class="send-btn" id="sendBtn">送信</button>
+    </div>
+  </div>
+
+  <aside class="thread-panel hidden" id="threadPanel">
+    <div class="thread-header"><h3>スレッド</h3><button id="closeThread">✕</button></div>
+    <div class="thread-origin" id="threadOrigin"></div>
+    <div class="thread-replies" id="threadReplies"></div>
+    <div class="thread-composer">
+      <textarea id="threadInput" placeholder="スレッドに返信 (Ctrl/Cmd+Enterで送信)"></textarea>
+      <button class="send-btn" id="threadSendBtn">送信</button>
+    </div>
+  </aside>
+</section>
+
+<div class="modal-overlay hidden" id="channelModalOverlay">
+  <div class="modal-card">
+    <h3>新しいチャンネルを作成</h3>
+    <div class="field"><label>チャンネル名</label><input id="newChannelName" placeholder="例: 新規プロジェクト"></div>
+    <div class="field">
+      <label>公開設定</label>
+      <div class="radio-row">
+        <label><input type="radio" name="chType" value="public" checked> 公開</label>
+        <label><input type="radio" name="chType" value="private"> 非公開</label>
+      </div>
+    </div>
+    <div class="field">
+      <label>参加メンバー(自分は自動的に含まれます)</label>
+      <div class="member-checklist" id="memberChecklist"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="cancelChannelBtn" class="ghost-btn">キャンセル</button>
+      <button id="createChannelBtn" class="primary">作成する</button>
+    </div>
+    <p id="channelModalError" style="color:#ff6b6b;font-size:12px;margin-top:8px;"></p>
+  </div>
+</div>
+
+<script>
+const API = 'https://aerial-silver-tones-flux.trycloudflare.com';
+const GADGET_ID = 'gadget_talknest_kato';
+let TOKEN = null, ME = null, USERS = [], CHANNELS = [], DMS = [];
+let CURRENT = { type: 'channel', id: 'ch_general' };
+let OPEN_THREAD_MSG_ID = null;
+let PENDING_FILES = [];
+const STAMPS = ['👍','🎉','😂','❤️','🙏','👀','💡','✅','🔥','😢','😮','🚀'];
+
+function apiHeaders(extra){
+  return Object.assign({ 'content-type':'application/json', 'x-gadget-id': GADGET_ID }, TOKEN ? { authorization: 'Bearer '+TOKEN } : {}, extra||{});
+}
+async function api(path, opts={}){
+  const res = await fetch(API+path, Object.assign({}, opts, { headers: apiHeaders(opts.headers) }));
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'request failed');
+  return data;
+}
+function avatarStyle(color){ return 'background:'+(color||'#747d8c')+';'; }
+function initials(name){ return (name||'?').trim().slice(0,1); }
+function userById(id){ return USERS.find(u=>u.id===id); }
+
+document.getElementById('loginBtn').onclick = async () => {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  try{
+    const data = await api('/api/login', { method:'POST', body: JSON.stringify({ username, password }) });
+    TOKEN = data.token; ME = data.user;
+    await boot();
+  }catch(e){ document.getElementById('loginError').textContent = 'ログイン失敗: '+e.message; }
+};
+document.getElementById('logoutBtn').onclick = async () => {
+  try{ await api('/api/logout', { method:'POST' }); }catch(e){}
+  TOKEN=null; ME=null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+};
+
+async function boot(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('meName').textContent = ME.displayName;
+  document.getElementById('meDept').textContent = ME.department || '';
+  const av = document.getElementById('meAvatar');
+  av.style = avatarStyle(ME.avatarColor); av.textContent = initials(ME.displayName);
+
+  const [usersRes, channelsRes, dmsRes] = await Promise.all([
+    api('/api/users'), api('/api/channels'), api('/api/dms')
+  ]);
+  USERS = usersRes.users; CHANNELS = channelsRes.channels; DMS = dmsRes.dms;
+  renderNav();
+  selectRoom('channel', CHANNELS[0] ? CHANNELS[0].id : null);
+  startPolling();
+}
+
+function renderNav(){
+  const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  const chNav = document.getElementById('channelNav');
+  chNav.innerHTML = '';
+  const filteredChannels = CHANNELS.filter(c => !query || c.name.toLowerCase().includes(query));
+  if(!filteredChannels.length){
+    const empty = document.createElement('div');
+    empty.className = 'nav-empty';
+    empty.textContent = query ? '一致するチャンネルがありません' : 'チャンネルがありません';
+    chNav.appendChild(empty);
+  }
+  filteredChannels.forEach(c=>{
+    const b = document.createElement('button');
+    b.textContent = (c.type==='private' ? '🔒 ' : '# ') + c.name;
+    b.className = (CURRENT.type==='channel' && CURRENT.id===c.id) ? 'active' : '';
+    b.onclick = () => selectRoom('channel', c.id);
+    chNav.appendChild(b);
+  });
+  const dmNav = document.getElementById('dmNav');
+  dmNav.innerHTML = '';
+  const filteredDms = DMS.filter(d=>{
+    if(!query) return true;
+    const otherId = d.members.find(m=>m!==ME.id);
+    const other = userById(otherId);
+    return other && other.displayName.toLowerCase().includes(query);
+  });
+  if(!filteredDms.length && query){
+    const empty = document.createElement('div');
+    empty.className = 'nav-empty';
+    empty.textContent = '一致するDM相手がいません';
+    dmNav.appendChild(empty);
+  }
+  filteredDms.forEach(d=>{
+    const otherId = d.members.find(m=>m!==ME.id);
+    const other = userById(otherId);
+    const b = document.createElement('button');
+    b.textContent = '@ ' + (other ? other.displayName : '不明なユーザー');
+    b.className = (CURRENT.type==='dm' && CURRENT.id===d.id) ? 'active' : '';
+    b.onclick = () => selectRoom('dm', d.id);
+    dmNav.appendChild(b);
+  });
+  if(!query){
+    USERS.filter(u=>u.id!==ME.id).forEach(u=>{
+      if (DMS.some(d=>d.members.includes(u.id))) return;
+      const b = document.createElement('button');
+      b.textContent = '+ ' + u.displayName + ' にDM';
+      b.style.color = 'var(--muted)';
+      b.onclick = async () => {
+        const r = await api('/api/dms', { method:'POST', body: JSON.stringify({ userId: u.id }) });
+        DMS.push(r.dm); renderNav(); selectRoom('dm', r.dm.id);
+      };
+      dmNav.appendChild(b);
+    });
+  }
+}
+document.getElementById('searchInput').addEventListener('input', renderNav);
+
+function openChannelModal(){
+  document.getElementById('newChannelName').value = '';
+  document.getElementById('channelModalError').textContent = '';
+  document.querySelector('input[name="chType"][value="public"]').checked = true;
+  const list = document.getElementById('memberChecklist');
+  list.innerHTML = '';
+  USERS.filter(u=>u.id!==ME.id).forEach(u=>{
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = u.id;
+    label.appendChild(cb);
+    const span = document.createElement('span');
+    span.textContent = u.displayName + (u.department ? '（'+u.department+'）' : '');
+    label.appendChild(span);
+    list.appendChild(label);
+  });
+  document.getElementById('channelModalOverlay').classList.remove('hidden');
+}
+function closeChannelModal(){
+  document.getElementById('channelModalOverlay').classList.add('hidden');
+}
+document.getElementById('newChannelBtn').onclick = openChannelModal;
+document.getElementById('cancelChannelBtn').onclick = closeChannelModal;
+document.getElementById('createChannelBtn').onclick = async () => {
+  const name = document.getElementById('newChannelName').value.trim();
+  const errorEl = document.getElementById('channelModalError');
+  if(!name){ errorEl.textContent = 'チャンネル名を入力してください'; return; }
+  const type = document.querySelector('input[name="chType"]:checked').value;
+  const members = Array.from(document.querySelectorAll('#memberChecklist input:checked')).map(cb=>cb.value);
+  try{
+    const r = await api('/api/channels', { method:'POST', body: JSON.stringify({ name, type, members }) });
+    CHANNELS.push(r.channel);
+    closeChannelModal();
+    document.getElementById('searchInput').value = '';
+    renderNav();
+    selectRoom('channel', r.channel.id);
+  }catch(e){ errorEl.textContent = '作成失敗: '+e.message; }
+};
+
+async function selectRoom(type, id){
+  if(!id) return;
+  CURRENT = { type, id };
+  closeThread();
+  renderNav();
+  const header = document.getElementById('roomTitle');
+  const sub = document.getElementById('roomSub');
+  if(type==='channel'){
+    const c = CHANNELS.find(c=>c.id===id);
+    header.textContent = '# ' + (c ? c.name : '');
+    sub.textContent = (c && c.type==='private') ? '非公開' : '公開';
+  } else {
+    const d = DMS.find(d=>d.id===id);
+    const other = d ? userById(d.members.find(m=>m!==ME.id)) : null;
+    header.textContent = '@ ' + (other ? other.displayName : '');
+    sub.textContent = other ? (other.department || '') : '';
+  }
+  await loadMessages();
+}
+
+async function loadMessages(){
+  const q = CURRENT.type==='channel' ? ('channelId='+CURRENT.id) : ('dmId='+CURRENT.id);
+  const data = await api('/api/messages?'+q);
+  renderMessages(data.messages);
+}
+
+function fmtTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function renderReactions(target, container, onReact){
+  container.innerHTML = '';
+  const reactions = target.reactions || {};
+  Object.entries(reactions).forEach(([emoji, uids])=>{
+    const pill = document.createElement('span');
+    pill.className = 'reaction-pill' + (uids.includes(ME.id) ? ' mine' : '');
+    pill.textContent = emoji + ' ' + uids.length;
+    pill.onclick = () => onReact(emoji);
+    container.appendChild(pill);
+  });
+}
+
+function openStampPopover(anchorEl, onPick){
+  document.querySelectorAll('.stamp-popover').forEach(p=>p.remove());
+  const pop = document.createElement('div');
+  pop.className = 'stamp-popover';
+  STAMPS.forEach(s=>{
+    const b = document.createElement('button');
+    b.textContent = s;
+    b.onclick = (e) => { e.stopPropagation(); onPick(s); pop.remove(); };
+    pop.appendChild(b);
+  });
+  document.body.appendChild(pop);
+  const rect = anchorEl.getBoundingClientRect();
+  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  pop.style.left = (rect.left + window.scrollX) + 'px';
+  setTimeout(()=>{ document.addEventListener('click', function handler(ev){ if(!pop.contains(ev.target)){ pop.remove(); document.removeEventListener('click', handler); } }); }, 0);
+}
+
+function renderMessages(messages){
+  const el = document.getElementById('messages');
+  el.innerHTML = '';
+  messages.forEach(m=>{
+    const row = document.createElement('div');
+    row.className = 'msg';
+    const av = document.createElement('div');
+    av.className = 'avatar'; av.style = avatarStyle(m.user && m.user.avatarColor); av.textContent = initials(m.user && m.user.displayName);
+    row.appendChild(av);
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'msg-body';
+    const head = document.createElement('div');
+    head.className = 'msg-head';
+    head.innerHTML = '<b>'+(m.user ? m.user.displayName : '不明')+'</b><time>'+fmtTime(m.createdAt)+'</time>';
+    bodyDiv.appendChild(head);
+    const text = document.createElement('div');
+    text.className = 'msg-text';
+    text.textContent = m.revoked ? m.text : m.text;
+    bodyDiv.appendChild(text);
+    (m.attachments||[]).forEach(a=>{
+      const chip = document.createElement('div');
+      chip.className = 'attachment-chip';
+      chip.textContent = '📎 ' + a.name;
+      bodyDiv.appendChild(chip);
+    });
+    const reactionsEl = document.createElement('div');
+    reactionsEl.className = 'reactions';
+    renderReactions(m, reactionsEl, async (emoji)=>{
+      await api('/api/messages/'+m.id+'/reactions', { method:'POST', body: JSON.stringify({ emoji }) });
+      loadMessages();
+    });
+    bodyDiv.appendChild(reactionsEl);
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    const stampBtn = document.createElement('button');
+    stampBtn.textContent = 'スタンプ';
+    stampBtn.onclick = (e) => openStampPopover(e.target, async (emoji)=>{
+      await api('/api/messages/'+m.id+'/reactions', { method:'POST', body: JSON.stringify({ emoji }) });
+      loadMessages();
+    });
+    actions.appendChild(stampBtn);
+    const threadBtn = document.createElement('button');
+    threadBtn.textContent = 'スレッドで返信' + (m.threadCount ? (' ('+m.threadCount+')') : '');
+    threadBtn.onclick = () => openThread(m);
+    actions.appendChild(threadBtn);
+    if(m.userId === ME.id && !m.revoked){
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '削除';
+      delBtn.onclick = async () => { await api('/api/messages/'+m.id, { method:'DELETE' }); loadMessages(); };
+      actions.appendChild(delBtn);
+    }
+    bodyDiv.appendChild(actions);
+    row.appendChild(bodyDiv);
+    el.appendChild(row);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+document.getElementById('attachBtn').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = (e) => {
+  PENDING_FILES = Array.from(e.target.files).map(f=>({ type:'file', name:f.name }));
+  renderPendingChips();
+};
+function renderPendingChips(){
+  const el = document.getElementById('pendingChips');
+  el.innerHTML = '';
+  PENDING_FILES.forEach((f,idx)=>{
+    const chip = document.createElement('span');
+    chip.className = 'attachment-chip';
+    chip.textContent = '📎 ' + f.name + ' ✕';
+    chip.style.cursor = 'pointer';
+    chip.onclick = () => { PENDING_FILES.splice(idx,1); renderPendingChips(); };
+    el.appendChild(chip);
+  });
+}
+
+async function sendMessage(){
+  const input = document.getElementById('composerInput');
+  const text = input.value.trim();
+  if(!text && !PENDING_FILES.length) return;
+  const payload = { text, attachments: PENDING_FILES };
+  if(CURRENT.type==='channel') payload.channelId = CURRENT.id; else payload.dmId = CURRENT.id;
+  await api('/api/messages', { method:'POST', body: JSON.stringify(payload) });
+  input.value = ''; PENDING_FILES = []; renderPendingChips();
+  document.getElementById('fileInput').value = '';
+  await loadMessages();
+}
+document.getElementById('sendBtn').onclick = sendMessage;
+document.getElementById('composerInput').addEventListener('keydown', (e)=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); sendMessage(); }
+});
+
+async function openThread(m){
+  OPEN_THREAD_MSG_ID = m.id;
+  document.getElementById('app').classList.remove('no-thread');
+  document.getElementById('threadPanel').classList.remove('hidden');
+  document.getElementById('threadOrigin').innerHTML = '<b>'+(m.user?m.user.displayName:'')+'</b>: '+m.text;
+  await loadThread();
+}
+function closeThread(){
+  OPEN_THREAD_MSG_ID = null;
+  document.getElementById('app').classList.add('no-thread');
+  document.getElementById('threadPanel').classList.add('hidden');
+}
+document.getElementById('closeThread').onclick = closeThread;
+
+async function loadThread(){
+  if(!OPEN_THREAD_MSG_ID) return;
+  const data = await api('/api/messages/'+OPEN_THREAD_MSG_ID+'/threads');
+  const el = document.getElementById('threadReplies');
+  el.innerHTML = '';
+  data.replies.forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'msg';
+    const av = document.createElement('div');
+    av.className = 'avatar'; av.style = avatarStyle(r.user && r.user.avatarColor); av.textContent = initials(r.user && r.user.displayName);
+    row.appendChild(av);
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'msg-body';
+    bodyDiv.innerHTML = '<div class="msg-head"><b>'+(r.user?r.user.displayName:'')+'</b><time>'+fmtTime(r.createdAt)+'</time></div><div class="msg-text">'+r.text+'</div>';
+    const reactionsEl = document.createElement('div');
+    reactionsEl.className = 'reactions';
+    renderReactions(r, reactionsEl, async (emoji)=>{
+      await api('/api/messages/'+r.id+'/reactions', { method:'POST', body: JSON.stringify({ emoji }) });
+      loadThread();
+    });
+    bodyDiv.appendChild(reactionsEl);
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    const stampBtn = document.createElement('button');
+    stampBtn.textContent = 'スタンプ';
+    stampBtn.onclick = (e) => openStampPopover(e.target, async (emoji)=>{
+      await api('/api/messages/'+r.id+'/reactions', { method:'POST', body: JSON.stringify({ emoji }) });
+      loadThread();
+    });
+    actions.appendChild(stampBtn);
+    bodyDiv.appendChild(actions);
+    row.appendChild(bodyDiv);
+    el.appendChild(row);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+async function sendThreadReply(){
+  const input = document.getElementById('threadInput');
+  const text = input.value.trim();
+  if(!text || !OPEN_THREAD_MSG_ID) return;
+  await api('/api/messages/'+OPEN_THREAD_MSG_ID+'/threads', { method:'POST', body: JSON.stringify({ text }) });
+  input.value = '';
+  await loadThread();
+  await loadMessages();
+}
+document.getElementById('threadSendBtn').onclick = sendThreadReply;
+document.getElementById('threadInput').addEventListener('keydown', (e)=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); sendThreadReply(); }
+});
+
+function startPolling(){
+  setInterval(async ()=>{
+    if(!TOKEN) return;
+    try{ await loadMessages(); if(OPEN_THREAD_MSG_ID) await loadThread(); }catch(e){}
+  }, 3000);
+}
+</script>
+</body>
+</html>
