@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   department TEXT,
   role TEXT,
   avatar_color TEXT,
+  avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -55,3 +56,21 @@ CREATE TABLE IF NOT EXISTS thread_replies (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_thread_replies_message ON thread_replies(message_id);
+
+CREATE TABLE IF NOT EXISTS uploads (
+  id TEXT PRIMARY KEY,
+  original_name TEXT NOT NULL,
+  stored_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  uploaded_by TEXT NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS read_receipts (
+  message_id TEXT NOT NULL REFERENCES messages(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  read_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (message_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_read_receipts_message ON read_receipts(message_id);
