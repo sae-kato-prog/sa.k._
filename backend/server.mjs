@@ -30,7 +30,7 @@ try {
 } catch (e) { /* .env is optional */ }
 
 const GADGET_ID = 'gadget_talknest_kato';
-const PORT = Number(process.env.TALKNEST_BACKEND_PORT || 8791);
+const PORT = Number(process.env.PORT || process.env.TALKNEST_BACKEND_PORT || 8791);
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const sessions = new Map();
 const STAMPS = ['👍','🎉','😂','❤️','🙏','👀','💡','✅','🔥','😢','😮','🚀'];
@@ -39,7 +39,15 @@ if (!process.env.DATABASE_URL) {
   console.error('DATABASE_URL is not set. Refusing to start without a configured PostgreSQL connection.');
   process.exit(1);
 }
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false }
+});
+if (process.env.PGSCHEMA) {
+  pool.on('connect', (client) => {
+    client.query(`SET search_path TO ${process.env.PGSCHEMA}, public`).catch(() => {});
+  });
+}
 
 const now = () => new Date().toISOString();
 const id = (prefix) => `${prefix}_${crypto.randomUUID().slice(0, 8)}`;
@@ -603,4 +611,5 @@ h1{font-size:18px;margin:0 0 8px;} p{font-size:13px;color:#8b93a3;margin:4px 0;}
 
 await seedIfEmpty();
 const server = http.createServer((req, res) => route(req, res).catch(err => json(res, err.status || 500, { error: err.message || 'server error' })));
-server.listen(PORT, '127.0.0.1', () => console.log(`TalkNest backend listening on http://127.0.0.1:${PORT} gadget_id=${GADGET_ID} storage=postgresql`));
+const HOST = process.env.PORT ? '0.0.0.0' : '127.0.0.1'; // Render requires binding to 0.0.0.0
+server.listen(PORT, HOST, () => console.log(`TalkNest backend listening on http://${HOST}:${PORT} gadget_id=${GADGET_ID} storage=postgresql`));
